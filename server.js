@@ -1,15 +1,30 @@
-const http = require("http");
 const WebSocket = require("ws");
 
 const PORT = process.env.PORT || 8080;
 
-const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ port: PORT });
+
+console.log("✅ GSR WebSocket server running on port", PORT);
 
 wss.on("connection", (ws) => {
-  ws.send(JSON.stringify({ status: "connected" }));
-});
+  console.log("🌐 Client connected");
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`WebSocket server running on port ${PORT}`);
+  // Send handshake
+  ws.send(JSON.stringify({ status: "connected" }));
+
+  ws.on("message", (message) => {
+    const payload = message.toString();
+    console.log("📥 Incoming GSR:", payload);
+
+    // 🔥 BROADCAST TO ALL CONNECTED CLIENTS
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(payload);
+      }
+    });
+  });
+
+  ws.on("close", () => {
+    console.log("❌ Client disconnected");
+  });
 });
